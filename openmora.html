@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abrir app</title>
+  <script>
+    // helpers
+    const isAndroid = () => /Android/i.test(navigator.userAgent);
+    const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // arma un query string con TODOS los params salvo los "de control"
+    function buildForwardQuery(params, controlKeys) {
+      const out = [];
+      for (const [k, v] of params.entries()) {
+        if (!controlKeys.has(k)) {
+          out.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
+        }
+      }
+      return out.length ? "?" + out.join("&") : "";
+    }
+
+    function openApp() {
+      const params = new URLSearchParams(location.search);
+
+      // control (podés pasarlos por query)
+      const timeout = Math.min(Math.max(parseInt(params.get("timeout") || "2000", 10) || 2000, 500), 6000);
+      const iosStore = params.get("ios") || "https://apps.apple.com/ar/app/id123456789";
+      const androidStore = params.get("android") || "https://play.google.com/store/apps/details?id=com.example.app";
+      const fallback = params.get("fallback") || (isAndroid() ? androidStore : iosStore);
+      const pkg = params.get("pkg") || "com.example.app"; // packageName Android
+      const scheme = (params.get("scheme") || "galicia").replace(/[^a-zA-Z0-9+\-.]/g,"");
+      const clickAction = (params.get("click_action") || "OPEN_MORA").toUpperCase();
+
+      // host por defecto según click_action (podés overridear con ?host=)
+      const host = (params.get("host") || (clickAction === "OPEN_MORA" ? "openmora" : "open")).trim() || "open";
+
+      // pasamos module y TODOS los params (menos control) al scheme
+      const control = new Set(["timeout","ios","android","fallback","pkg","scheme","host"]);
+      const forwardQs = buildForwardQuery(params, control);
+
+      const schemeUrl = `${scheme}://${host}${forwardQs}`;
+
+      if (isAndroid()) {
+        // intent:// + mismos params reenviados
+        const browserFallback = encodeURIComponent(fallback);
+        const intentUrl =
+          `intent://${host}${forwardQs}` +
+          `#Intent;scheme=${scheme};package=${pkg};S.browser_fallback_url=${browserFallback};end`;
+        location.href = intentUrl;
+      } else if (isIOS()) {
+        location.href = schemeUrl;
+        setTimeout(() => { location.href = fallback; }, timeout);
+      } else {
+        // desktop u otros
+        location.href = fallback;
+      }
+    }
+
+    window.addEventListener("load", openApp);
+  </script>
+</head>
+<body>
+  <p>Redirigiendo a la app… Si no abre, te llevamos a la tienda.</p>
+</body>
+</html>
