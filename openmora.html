@@ -5,54 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Abrir app</title>
   <script>
-    // helpers
+    // ===== Config fija (sin query params) =====
+    const SCHEME = "galicia";
+    const CLICK_ACTION = "OPEN_MORA";   // fijo
+    const MODULE = "xyz";               // fijo
+    const HOST = CLICK_ACTION === "OPEN_MORA" ? "openmora" : "open";
+
+    // Stores y package (ajustá estos tres según tu app)
+    const IOS_STORE = "https://apps.apple.com/ar/app/id123456789";
+    const ANDROID_STORE = "https://play.google.com/store/apps/details?id=com.example.app";
+    const ANDROID_PACKAGE = "com.example.app";
+
+    // Timeout iOS para fallback
+    const IOS_TIMEOUT_MS = 2000; // 1500–2500 suele ir bien
+
+    // ===== Helpers =====
     const isAndroid = () => /Android/i.test(navigator.userAgent);
     const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // arma un query string con TODOS los params salvo los "de control"
-    function buildForwardQuery(params, controlKeys) {
-      const out = [];
-      for (const [k, v] of params.entries()) {
-        if (!controlKeys.has(k)) {
-          out.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-        }
-      }
-      return out.length ? "?" + out.join("&") : "";
-    }
-
     function openApp() {
-      const params = new URLSearchParams(location.search);
+      // Construimos scheme con params fijos
+      const qs = `?module=${encodeURIComponent(MODULE)}&click_action=${encodeURIComponent(CLICK_ACTION)}`;
+      const schemeUrl = `${SCHEME}://${HOST}${qs}`;
+      const fallback = isAndroid() ? ANDROID_STORE : IOS_STORE;
 
-      // control (podés pasarlos por query)
-      const timeout = Math.min(Math.max(parseInt(params.get("timeout") || "2000", 10) || 2000, 500), 6000);
-      const iosStore = params.get("ios") || "https://apps.apple.com/ar/app/id123456789";
-      const androidStore = params.get("android") || "https://play.google.com/store/apps/details?id=com.example.app";
-      const fallback = params.get("fallback") || (isAndroid() ? androidStore : iosStore);
-      const pkg = params.get("pkg") || "com.example.app"; // packageName Android
-      const scheme = (params.get("scheme") || "galicia").replace(/[^a-zA-Z0-9+\-.]/g,"");
-      const clickAction = (params.get("click_action") || "OPEN_MORA").toUpperCase();
-
-      // host por defecto según click_action (podés overridear con ?host=)
-      const host = (params.get("host") || (clickAction === "OPEN_MORA" ? "openmora" : "open")).trim() || "open";
-
-      // pasamos module y TODOS los params (menos control) al scheme
-      const control = new Set(["timeout","ios","android","fallback","pkg","scheme","host"]);
-      const forwardQs = buildForwardQuery(params, control);
-
-      const schemeUrl = `${scheme}://${host}${forwardQs}`;
+      // Cancelar fallback si la página pierde foco/visibilidad (la app se abrió)
+      let timer = null;
+      const cancelFallback = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      window.addEventListener("pagehide", cancelFallback, { once: true });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") cancelFallback();
+      }, { passive: true });
+      window.addEventListener("blur", cancelFallback, { passive: true });
 
       if (isAndroid()) {
-        // intent:// + mismos params reenviados
-        const browserFallback = encodeURIComponent(fallback);
+        // Android: usar intent:// con fallback automático
         const intentUrl =
-          `intent://${host}${forwardQs}` +
-          `#Intent;scheme=${scheme};package=${pkg};S.browser_fallback_url=${browserFallback};end`;
+          `intent://${HOST}${qs}` +
+          `#Intent;scheme=${SCHEME};package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(fallback)};end`;
         location.href = intentUrl;
       } else if (isIOS()) {
+        // iOS: probar scheme y, si no abre, ir al Store tras timeout
         location.href = schemeUrl;
-        setTimeout(() => { location.href = fallback; }, timeout);
+        timer = setTimeout(() => { location.href = fallback; }, IOS_TIMEOUT_MS);
       } else {
-        // desktop u otros
+        // Desktop u otros
         location.href = fallback;
       }
     }
@@ -62,5 +59,7 @@
 </head>
 <body>
   <p>Redirigiendo a la app… Si no abre, te llevamos a la tienda.</p>
+</body>
+</html>
 </body>
 </html>
