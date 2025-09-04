@@ -1,75 +1,63 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Abrir app</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-           margin: 0; padding: 40px 20px; line-height: 1.5; }
-    .box { max-width: 560px; margin: 0 auto; text-align: center; }
-    .btn { display: inline-block; padding: 12px 16px; border: 1px solid #ccc; border-radius: 10px; text-decoration: none; }
-    .muted { color: #666; font-size: 14px; margin-top: 10px; }
-  </style>
-  <script>
-    // ===== Config fija (sin query params) =====
-    const SCHEME = "mobi.galicia.ar";
-    const CLICK_ACTION = "OPEN_MORA";   // fijo
-    const MODULE = "";                  // fijo
-    const HOST = CLICK_ACTION === "OPEN_MORA" ? "openmora" : "open";
-    const ANDROID_PACKAGE = "com.mosync.app_Banco_Galicia"; // <- cambiá por tu package real
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abrir app</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 40px 20px; line-height: 1.5;
+  }
+  .box { max-width: 560px; margin: 0 auto; text-align: center; }
+  .btn { display: inline-block; padding: 12px 16px; border: 1px solid #ccc; border-radius: 10px; text-decoration: none; }
+  .muted { color: #666; font-size: 14px; margin-top: 10px; }
+</style>
+<script>
+  const SCHEME = "mobi.galicia.ar";       // Esquema de la app Banco Galicia
+  const CLICK_ACTION = "OPEN_MORA";
+  const MODULE = "";
+  const HOST = CLICK_ACTION === "OPEN_MORA" ? "openmora" : "open";
 
-    // Helpers
-    const isAndroid = () => /Android/i.test(navigator.userAgent);
-    const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+ 
 
-    function buildUrls() {
-      const qs = `?module=${encodeURIComponent(MODULE)}&click_action=${encodeURIComponent(CLICK_ACTION)}`;
-      const schemeUrl = `${SCHEME}://${HOST}${qs}`;
+  const isAndroid = () => /Android/i.test(navigator.userAgent);
+  const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // En Android agregamos los extras (S. para String)
-      const intentUrl =
-        `intent://${HOST}${qs}` +
-        `#Intent;scheme=${SCHEME};package=${ANDROID_PACKAGE};` +
-        `S.click_action=${encodeURIComponent(CLICK_ACTION)};` +
-        `S.module=${encodeURIComponent(MODULE)};` +
-        `end`;
+ 
 
-      return { schemeUrl, intentUrl };
-    }
+  function buildUrl() {
+    const qs = `?module=${encodeURIComponent(MODULE)}&click_action=${encodeURIComponent(CLICK_ACTION)}`;
+    return `${SCHEME}://${HOST}${qs}`;
+  }
 
-    function openApp() {
-      const { schemeUrl, intentUrl } = buildUrls();
-      if (isAndroid()) {
-        location.href = intentUrl;
-      } else if (isIOS()) {
-        location.href = schemeUrl;
-      } else {
-        console.log("Plataforma no soportada para deep link.");
-      }
-    }
+ 
 
-    window.addEventListener("load", () => {
-      openApp();
+  function openApp() {
+    const appUrl = buildUrl();
+    window.location.href = appUrl; // Intentará abrir app. Si no está instalada, no pasa nada.
+  }
 
-      const { schemeUrl, intentUrl } = buildUrls();
-      const btn = document.getElementById("manualOpen");
-      if (btn) {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          if (isAndroid()) location.href = intentUrl;
-          else if (isIOS()) location.href = schemeUrl;
-        });
-      }
-    });
-  </script>
+ 
+
+  window.addEventListener("load", () => {
+    openApp();
+    const btn = document.getElementById("manualOpen");
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        openApp();
+      });
+    }
+  });
+</script>
 </head>
 <body>
-  <div class="box">
-    <h1>Redirigiendo a la app…</h1>
-    <p class="muted">Si no se abre automáticamente, tocá el botón:</p>
-    <p><a id="manualOpen" class="btn" href="#">Abrir app</a></p>
-    <p class="muted">No hay redirección a tienda. Si la app no está instalada, simplemente no pasará nada.</p>
-  </div>
+<div class="box">
+<h1>Redirigiendo a la app&hellip;</h1>
+<p class="muted">Si no se abre autom&aacute;ticamente, toc&aacute; el bot&oacute;n:</p>
+<p><a id="manualOpen" class="btn" href="#">Abrir app</a></p>
+<p class="muted">No hay redirecci&oacute;n a tienda. Si la app no est&aacute; instalada, simplemente no pasar&aacute; nada.</p>
+</div>
 </body>
 </html>
